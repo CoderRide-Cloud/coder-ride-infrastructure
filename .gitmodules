@@ -1,30 +1,30 @@
 [submodule "api-gateway"]
 	path = api-gateway
-	url = git@github.com-work:CoderRide-Cloud/api-gateway.git
+	url = https://github.com/CoderRide-Cloud/api-gateway.git
 [submodule "discovery-server"]
 	path = discovery-server
-	url = git@github.com-work:CoderRide-Cloud/discovery-server.git
+	url = https://github.com/CoderRide-Cloud/discovery-server.git
 [submodule "auth-service"]
 	path = auth-service
-	url = git@github.com-work:CoderRide-Cloud/auth-service.git
+	url = https://github.com/CoderRide-Cloud/auth-service.git
 [submodule "member-service"]
 	path = member-service
-	url = git@github.com-work:CoderRide-Cloud/member-service.git
+	url = https://github.com/CoderRide-Cloud/member-service.git
 [submodule "role-service"]
 	path = role-service
-	url = git@github.com-work:CoderRide-Cloud/role-service.git
+	url = https://github.com/CoderRide-Cloud/role-service.git
 [submodule "project-service"]
 	path = project-service
-	url = git@github.com-work:CoderRide-Cloud/project-service.git
+	url = https://github.com/CoderRide-Cloud/project-service.git
 [submodule "skill-service"]
 	path = skill-service
-	url = git@github.com-work:CoderRide-Cloud/skill-service.git
+	url = https://github.com/CoderRide-Cloud/skill-service.git
 [submodule "event-service"]
 	path = event-service
-	url = git@github.com-work:CoderRide-Cloud/event-service.git
+	url = https://github.com/CoderRide-Cloud/event-service.git
 [submodule "notification-service"]
 	path = notification-service
-	url = git@github.com-work:CoderRide-Cloud/notification-service.git
+	url = https://github.com/CoderRide-Cloud/notification-service.git
 [submodule "common-lib"]
 	path = common-lib
-	url = git@github.com-work:CoderRide-Cloud/common-lib.git
+	url = https://github.com/CoderRide-Cloud/common-lib.git

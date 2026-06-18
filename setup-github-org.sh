@@ -99,7 +99,7 @@ echo "$ROOT_GITIGNORE" > .gitignore
 for SVC in "${SERVICES[@]}"; do
     if [ -d "$SVC" ]; then
         echo "  -> Adding $SVC as submodule..."
-        git submodule add "https://github.com/$ORG_NAME/$SVC.git" "$SVC"
+        git submodule add "git@github.com-work:$ORG_NAME/$SVC.git" "$SVC"
     fi
 done
 

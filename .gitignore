@@ -3,3 +3,4 @@
 .vscode/
 *.log
 push-all.sh
+pull-all.sh

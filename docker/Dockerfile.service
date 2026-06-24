@@ -1,0 +1,23 @@
+# syntax=docker/dockerfile:1
+
+ARG SERVICE_NAME
+FROM eclipse-temurin:21-jdk-alpine AS build
+ARG SERVICE_NAME
+RUN apk add --no-cache maven
+WORKDIR /workspace
+
+COPY common-lib ./common-lib
+
+RUN --mount=type=cache,id=maven-${SERVICE_NAME},target=/root/.m2 cd common-lib && mvn clean install -DskipTests -q
+
+COPY ${SERVICE_NAME}/pom.xml ./${SERVICE_NAME}/pom.xml
+COPY ${SERVICE_NAME}/src ./${SERVICE_NAME}/src
+
+RUN --mount=type=cache,id=maven-${SERVICE_NAME},target=/root/.m2 cd ${SERVICE_NAME} && mvn clean package -DskipTests -q
+
+FROM eclipse-temurin:21-jre-alpine
+ARG SERVICE_NAME
+WORKDIR /app
+COPY --from=build /workspace/${SERVICE_NAME}/target/*.jar app.jar
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.jar"]

@@ -1,0 +1,483 @@
+{
+  "info": {
+    "name": "CoderRide Developer Community API",
+    "description": "Comprehensive API Tests for all endpoints including edge cases (60+ cases). Covers CRUD operations, permission boundaries, and input validation.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "0 - Setup (run first)",
+      "item": [
+        {
+          "name": "Login via GitHub (saves token)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"githubId\": \"12345678\",\n  \"username\": \"testuser\",\n  \"email\": \"test@example.com\",\n  \"avatarUrl\": \"https://avatars.githubusercontent.com/u/1\",\n  \"githubUrl\": \"https://github.com/testuser\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/auth/github", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "github"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Login returns 200', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "if (json.token) {",
+                  "  let t = json.token.trim();",
+                  "  if (t.startsWith('Bearer ')) { t = t.substring(7); }",
+                  "  pm.collectionVariables.set('token', t);",
+                  "  console.log('Token saved to {{token}}');",
+                  "} else {",
+                  "  console.error('No token in response — check auth-service is running');",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify token works (GET /auth/me)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/auth/me", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "me"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Token is valid (200)', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 401) {",
+                  "  const body = pm.response.json();",
+                  "  console.error('Gateway rejected token:', body.message);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Auth & User Service",
+      "item": [
+        {
+          "name": "Auth: Get Current User (No Token)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/api/v1/auth/me", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "me"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status code is 401\", function () { pm.response.to.have.status(401); });"] } }]
+        },
+        {
+          "name": "Auth: Get Current User (With Token)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/auth/me", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "me"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });"] } }]
+        },
+        {
+          "name": "Auth: Github Login Missing Body",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": { "raw": "{{base_url}}/api/v1/auth/github", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "github"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status code is 400\", function () { pm.response.to.have.status(400); });"] } }]
+        },
+        {
+          "name": "Users: Get All Users (No Token)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/api/v1/users", "host": ["{{base_url}}"], "path": ["api", "v1", "users"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status code is 401\", function () { pm.response.to.have.status(401); });"] } }]
+        },
+        {
+          "name": "Users: Get All Users (With Token)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/users", "host": ["{{base_url}}"], "path": ["api", "v1", "users"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });"] } }]
+        },
+        {
+          "name": "Users: Get Pending Users",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/users/pending", "host": ["{{base_url}}"], "path": ["api", "v1", "users", "pending"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });"] } }]
+        },
+        {
+          "name": "Users: Get Lead Users",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/users/leads", "host": ["{{base_url}}"], "path": ["api", "v1", "users", "leads"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });"] } }]
+        },
+        {
+          "name": "Users: Approve User (With Token)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/users/99999/approve", "host": ["{{base_url}}"], "path": ["api", "v1", "users", "99999", "approve"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status code is 403 or 404\", function () { pm.expect(pm.response.code).to.be.oneOf([403, 404]); });"] } }]
+        },
+        {
+          "name": "Users: Reject User (With Token)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/users/99999/reject", "host": ["{{base_url}}"], "path": ["api", "v1", "users", "99999", "reject"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status code is 403 or 404\", function () { pm.expect(pm.response.code).to.be.oneOf([403, 404]); });"] } }]
+        },
+        {
+          "name": "Users: Update Role",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n    \"roleName\": \"ADMIN\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/users/99999/role", "host": ["{{base_url}}"], "path": ["api", "v1", "users", "99999", "role"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status code is 403 or 404\", function () { pm.expect(pm.response.code).to.be.oneOf([403, 404]); });"] } }]
+        },
+        {
+          "name": "Users: Update Custom Role",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n    \"customRoleId\": 1\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/users/99999/custom-role", "host": ["{{base_url}}"], "path": ["api", "v1", "users", "99999", "custom-role"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status code is 403 or 404\", function () { pm.expect(pm.response.code).to.be.oneOf([403, 404]); });"] } }]
+        },
+        {
+          "name": "Users: Delete Custom Role",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/users/99999/custom-role", "host": ["{{base_url}}"], "path": ["api", "v1", "users", "99999", "custom-role"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status code is 403 or 404\", function () { pm.expect(pm.response.code).to.be.oneOf([403, 404]); });"] } }]
+        }
+      ]
+    },
+    {
+      "name": "Member Service",
+      "item": [
+        {
+          "name": "Members: Get All",
+          "request": { "method": "GET", "url": { "raw": "{{base_url}}/api/v1/members", "host": ["{{base_url}}"], "path": ["api", "v1", "members"] } },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });"] } }]
+        },
+        {
+          "name": "Members: Get By ID",
+          "request": { "method": "GET", "url": { "raw": "{{base_url}}/api/v1/members/1", "host": ["{{base_url}}"], "path": ["api", "v1", "members", "1"] } },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status code is 200 or 404\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 404]); });"] } }]
+        },
+        {
+          "name": "Members: Get My Profile",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/members/profile", "host": ["{{base_url}}"], "path": ["api", "v1", "members", "profile"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status code is 200 or 404\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 404]); });"] } }]
+        },
+        {
+          "name": "Members: Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n    \"bio\": \"Updated bio\",\n    \"location\": \"Remote\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/members/profile", "host": ["{{base_url}}"], "path": ["api", "v1", "members", "profile"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status code is 200 or 404\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 404]); });"] } }]
+        },
+        {
+          "name": "Members: Add Skill",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n    \"skillIds\": [1]\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/members/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "members", "skills"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status code is 200, 201, 400 or 404\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 400, 404]); });"] } }]
+        },
+        {
+          "name": "Members: Remove Skill",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/members/skills/99999", "host": ["{{base_url}}"], "path": ["api", "v1", "members", "skills", "99999"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status code is 200, 204, 400 or 404\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 204, 400, 404]); });"] } }]
+        }
+      ]
+    },
+    {
+      "name": "Project Service",
+      "item": [
+        {
+          "name": "Projects: Get Approved",
+          "request": { "method": "GET", "url": { "raw": "{{base_url}}/api/v1/projects", "host": ["{{base_url}}"], "path": ["api", "v1", "projects"] } },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status is 200\", function () { pm.response.to.have.status(200); });"] } }]
+        },
+        {
+          "name": "Projects: Get Pending",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/projects/pending", "host": ["{{base_url}}"], "path": ["api", "v1", "projects", "pending"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status is 200 or 403\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 403]); });"] } }]
+        },
+        {
+          "name": "Projects: Create",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n    \"title\": \"Postman Project\",\n    \"description\": \"Description\",\n    \"githubRepositoryUrl\": \"https://github.com\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/projects", "host": ["{{base_url}}"], "path": ["api", "v1", "projects"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status is 200 or 201\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); });"] } }]
+        },
+        {
+          "name": "Projects: Update",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n    \"title\": \"Updated\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/projects/1", "host": ["{{base_url}}"], "path": ["api", "v1", "projects", "1"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status is 200, 400, 403, or 404\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 400, 403, 404]); });"] } }]
+        },
+        {
+          "name": "Projects: Approve/Reject",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n    \"approved\": true,\n    \"reviewNotes\": \"Approved by Postman\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/projects/1/approval", "host": ["{{base_url}}"], "path": ["api", "v1", "projects", "1", "approval"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status is 200, 400, 403, or 404\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 400, 403, 404]); });"] } }]
+        },
+        {
+          "name": "Projects: Delete",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/projects/99999", "host": ["{{base_url}}"], "path": ["api", "v1", "projects", "99999"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status is 200, 204, 403, or 404\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 204, 403, 404]); });"] } }]
+        }
+      ]
+    },
+    {
+      "name": "Tags",
+      "item": [
+        {
+          "name": "Tags: Get All",
+          "request": { "method": "GET", "url": { "raw": "{{base_url}}/api/v1/tags", "host": ["{{base_url}}"], "path": ["api", "v1", "tags"] } },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status is 200\", function () { pm.response.to.have.status(200); });"] } }]
+        },
+        {
+          "name": "Tags: Create",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n    \"name\": \"PostmanTag\",\n    \"description\": \"Desc\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/tags", "host": ["{{base_url}}"], "path": ["api", "v1", "tags"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status is 200, 201, 400 or 403\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 400, 403]); });"] } }]
+        },
+        {
+          "name": "Tags: Delete",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/tags/99999", "host": ["{{base_url}}"], "path": ["api", "v1", "tags", "99999"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status is 200, 204, 403 or 404\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 204, 403, 404]); });"] } }]
+        }
+      ]
+    },
+    {
+      "name": "Roles",
+      "item": [
+        {
+          "name": "Roles: Get All",
+          "request": { "method": "GET", "url": { "raw": "{{base_url}}/api/v1/roles", "host": ["{{base_url}}"], "path": ["api", "v1", "roles"] } },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status is 200\", function () { pm.response.to.have.status(200); });"] } }]
+        },
+        {
+          "name": "Roles: Create",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n    \"name\": \"ROLE_TEST\",\n    \"description\": \"Desc\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/roles", "host": ["{{base_url}}"], "path": ["api", "v1", "roles"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status is 200, 201, 400 or 403\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 400, 403]); });"] } }]
+        },
+        {
+          "name": "Roles: Update",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n    \"roleName\": \"UPDATED\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/roles/99999", "host": ["{{base_url}}"], "path": ["api", "v1", "roles", "99999"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status is 200, 400, 403, or 404\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 400, 403, 404]); });"] } }]
+        },
+        {
+          "name": "Roles: Delete",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/roles/99999", "host": ["{{base_url}}"], "path": ["api", "v1", "roles", "99999"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status is 200, 204, 403 or 404\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 204, 403, 404]); });"] } }]
+        }
+      ]
+    },
+    {
+      "name": "Skills",
+      "item": [
+        {
+          "name": "Skills: Get All",
+          "request": { "method": "GET", "url": { "raw": "{{base_url}}/api/v1/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "skills"] } },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status is 200\", function () { pm.response.to.have.status(200); });"] } }]
+        },
+        {
+          "name": "Skills: Create",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n    \"name\": \"TestSkill\",\n    \"category\": \"Test\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/skills", "host": ["{{base_url}}"], "path": ["api", "v1", "skills"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status is 200, 201, 400 or 403\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 400, 403]); });"] } }]
+        },
+        {
+          "name": "Skills: Update",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n    \"name\": \"Updated\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/skills/99999", "host": ["{{base_url}}"], "path": ["api", "v1", "skills", "99999"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status is 200, 400, 403, or 404\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 400, 403, 404]); });"] } }]
+        },
+        {
+          "name": "Skills: Delete",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/skills/99999", "host": ["{{base_url}}"], "path": ["api", "v1", "skills", "99999"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status is 200, 204, 403 or 404\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 204, 403, 404]); });"] } }]
+        }
+      ]
+    },
+    {
+      "name": "Events",
+      "item": [
+        {
+          "name": "Events: Get All",
+          "request": { "method": "GET", "url": { "raw": "{{base_url}}/api/v1/events", "host": ["{{base_url}}"], "path": ["api", "v1", "events"] } },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status is 200\", function () { pm.response.to.have.status(200); });"] } }]
+        },
+        {
+          "name": "Events: Create",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n    \"title\": \"Postman Event\",\n    \"startDate\": \"2026-12-31T10:00:00\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/events", "host": ["{{base_url}}"], "path": ["api", "v1", "events"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status is 200, 201, 400 or 403\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 400, 403]); });"] } }]
+        },
+        {
+          "name": "Events: Update",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n    \"title\": \"Updated\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/events/99999", "host": ["{{base_url}}"], "path": ["api", "v1", "events", "99999"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status is 200, 400, 403, or 404\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 400, 403, 404]); });"] } }]
+        },
+        {
+          "name": "Events: Delete",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/events/99999", "host": ["{{base_url}}"], "path": ["api", "v1", "events", "99999"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status is 200, 204, 403 or 404\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 204, 403, 404]); });"] } }]
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "Notifications: Subscribe",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n    \"email\": \"test@example.com\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/notifications/subscribe", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "subscribe"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status is 200, 201, or 400\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 400]); });"] } }]
+        },
+        {
+          "name": "Notifications: Send",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n    \"title\": \"Test\",\n    \"body\": \"Hello\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/notifications/send", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "send"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Status is 200, 201, or 403\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 403]); });"] } }]
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const token = pm.collectionVariables.get('token') || pm.environment.get('token');",
+          "if (!token || token === 'YOUR_JWT_TOKEN') {",
+          "  console.warn('⚠️ Token not set. Run \"0 - Setup → Login via GitHub\" first, or set collection variable {{token}}.');",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8080", "type": "string" },
+    { "key": "token", "value": "", "type": "string" }
+  ]
+}

@@ -91,6 +91,35 @@ To manage 10 microservices easily, use our custom Bash scripts located in this r
 - `./pull-all.sh`: Fetches and pulls the latest changes for the parent repository and all 10 microservices.
 - `./fix-ssh.sh`: Updates your Git remotes to use a specific `-work` SSH profile if you have multiple GitHub accounts.
 
+## 🧪 API Testing
+
+We have built-in tools for testing all the microservices locally via the API Gateway.
+
+### CLI Test Runner
+
+We provide a beautiful visual CLI test script that covers all major endpoints and authentication states:
+
+```bash
+# Run tests without auth token (some tests will be skipped/fail as expected)
+node cli-test-runner.js
+
+# Run full test suite with an active user token
+node cli-test-runner.js --token="YOUR_JWT_TOKEN"
+```
+
+### Postman Collection
+
+For more detailed debugging and manual testing, import our comprehensive Postman collection:
+1. Open Postman.
+2. Click **Import** and select `CoderRide_Postman_Collection.json` located in the root directory.
+3. Set your `token` variable to a valid JWT token generated from `/api/auth/session` (or the Auth Service) to successfully hit protected endpoints with Admin privileges.
+4. **Note**: The API Gateway now correctly injects `X-User-*` headers into downstream requests for public endpoints if a valid Bearer token is present. This ensures role-based UI features work even on semi-public pages.
+
+## 🐛 Recent Bug Fixes & Improvements
+- **JWT Header Injection**: Fixed API Gateway routing where public endpoints were stripping out optional user identity headers.
+- **Role Hierarchy UI**: Stabilized the custom role reordering drag-and-drop mechanics in the Admin Dashboard.
+- **Frontend Hydration & Crashes**: Resolved Next.js runtime type errors regarding `member.skillIds` and optimized dashboard `useEffect` triggers to eliminate page flickering.
+
 ## 📦 Microservices Directory
 
 Explore the individual READMEs for detailed API information and service-specific architectures:

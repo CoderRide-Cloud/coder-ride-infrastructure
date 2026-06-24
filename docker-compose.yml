@@ -1,13 +1,23 @@
 version: '3.8'
 
+x-service-env: &service-env
+  SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-coderride}
+  SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-password}
+  EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+  JWT_SECRET: ${JWT_SECRET:-thisisaverysecuresecretkeythatisverylongandsecure!}
+  JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
+  GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+  GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+
 services:
   postgres:
     image: postgres:15-alpine
     container_name: coder_ride_postgres
     environment:
-      POSTGRES_USER: coderride
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: coderride_master
+      POSTGRES_USER: ${POSTGRES_USER:-coderride}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-coderride_master}
     ports:
       - "5432:5432"
     volumes:
@@ -15,6 +25,25 @@ services:
       - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - coderride-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-coderride} -d ${POSTGRES_DB:-coderride_master}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: coder_ride_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@coderride.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    networks:
+      - coderride-network
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   redis:
     image: redis:7-alpine
@@ -59,6 +88,214 @@ services:
       - "9411:9411"
     networks:
       - coderride-network
+
+  discovery-server:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.infra
+      args:
+        SERVICE_NAME: discovery-server
+    container_name: discovery-server
+    ports:
+      - "8761:8761"
+    networks:
+      - coderride-network
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.service
+      args:
+        SERVICE_NAME: auth-service
+    container_name: auth-service
+    depends_on:
+      - postgres
+      - discovery-server
+      - kafka
+    environment:
+      <<: *service-env
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/coder_ride_auth
+      SERVER_PORT: 8081
+      SUPERADMIN_GITHUB_ID: ${SUPERADMIN_GITHUB_ID:-}
+      SUPERADMIN_USERNAME: ${SUPERADMIN_USERNAME:-}
+      SUPERADMIN_EMAIL: ${SUPERADMIN_EMAIL:-}
+      SUPERADMIN_AVATAR_URL: ${SUPERADMIN_AVATAR_URL:-}
+      SUPERADMIN_GITHUB_URL: ${SUPERADMIN_GITHUB_URL:-}
+    ports:
+      - "8081:8081"
+    networks:
+      - coderride-network
+
+  member-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.service
+      args:
+        SERVICE_NAME: member-service
+    container_name: member-service
+    depends_on:
+      - postgres
+      - discovery-server
+      - kafka
+    environment:
+      <<: *service-env
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/coder_ride_member
+      SERVER_PORT: 8082
+    ports:
+      - "8082:8082"
+    networks:
+      - coderride-network
+
+  role-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.service
+      args:
+        SERVICE_NAME: role-service
+    container_name: role-service
+    depends_on:
+      - postgres
+      - discovery-server
+    environment:
+      <<: *service-env
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/coder_ride_role
+      SERVER_PORT: 8083
+    ports:
+      - "8083:8083"
+    networks:
+      - coderride-network
+
+  project-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.service
+      args:
+        SERVICE_NAME: project-service
+    container_name: project-service
+    depends_on:
+      - postgres
+      - discovery-server
+      - kafka
+    environment:
+      <<: *service-env
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/coder_ride_project
+      SERVER_PORT: 8084
+    ports:
+      - "8084:8084"
+    networks:
+      - coderride-network
+
+  skill-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.service
+      args:
+        SERVICE_NAME: skill-service
+    container_name: skill-service
+    depends_on:
+      - postgres
+      - discovery-server
+    environment:
+      <<: *service-env
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/coder_ride_skill
+      SERVER_PORT: 8085
+    ports:
+      - "8085:8085"
+    networks:
+      - coderride-network
+
+  event-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.service
+      args:
+        SERVICE_NAME: event-service
+    container_name: event-service
+    depends_on:
+      - postgres
+      - discovery-server
+      - kafka
+    environment:
+      <<: *service-env
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/coder_ride_event
+      SERVER_PORT: 8086
+    ports:
+      - "8086:8086"
+    networks:
+      - coderride-network
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.service
+      args:
+        SERVICE_NAME: notification-service
+    container_name: notification-service
+    depends_on:
+      - postgres
+      - discovery-server
+      - kafka
+    environment:
+      <<: *service-env
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/coder_ride_notification
+      SERVER_PORT: 8087
+      CODERRIDE_NOTIFICATIONS_EMAIL_RESENDAPIKEY: ${RESEND_API_KEY:-}
+      CODERRIDE_NOTIFICATIONS_EMAIL_ADMIN: ${ADMIN_EMAIL:-admin@coderride.com}
+      CODERRIDE_NOTIFICATIONS_EMAIL_FROM: ${NOTIFICATION_EMAIL:-notifications@coderride.com}
+      CODERRIDE_NOTIFICATIONS_APPURL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      CODERRIDE_NOTIFICATIONS_DISCORD_NEWUSERS: ${DISCORD_WEBHOOK_NEW_USERS:-}
+      CODERRIDE_NOTIFICATIONS_DISCORD_APPROVALS: ${DISCORD_WEBHOOK_APPROVALS:-}
+      CODERRIDE_NOTIFICATIONS_DISCORD_REJECTIONS: ${DISCORD_WEBHOOK_REJECTIONS:-}
+      CODERRIDE_NOTIFICATIONS_DISCORD_NEWPROJECTS: ${DISCORD_WEBHOOK_NEW_PROJECTS:-}
+      CODERRIDE_NOTIFICATIONS_DISCORD_PROJECTAPPROVALS: ${DISCORD_WEBHOOK_PROJECT_APPROVALS:-}
+      CODERRIDE_NOTIFICATIONS_DISCORD_PROJECTREJECTIONS: ${DISCORD_WEBHOOK_PROJECT_REJECTIONS:-}
+    ports:
+      - "8087:8087"
+    networks:
+      - coderride-network
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.infra
+      args:
+        SERVICE_NAME: api-gateway
+    container_name: api-gateway
+    depends_on:
+      - discovery-server
+      - auth-service
+      - member-service
+      - project-service
+      - skill-service
+      - role-service
+      - event-service
+      - notification-service
+    environment:
+      <<: *service-env
+      SERVER_PORT: 8080
+    ports:
+      - "8080:8080"
+    networks:
+      - coderride-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: coder_ride_frontend
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080/api/v1}
+      INTERNAL_API_URL: ${INTERNAL_API_URL:-http://api-gateway:8080/api/v1}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-supersecretkey}
+      GITHUB_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_SECRET: ${GITHUB_CLIENT_SECRET:-}
+    ports:
+      - "3000:3000"
+    networks:
+      - coderride-network
+    depends_on:
+      - api-gateway
 
 networks:
   coderride-network:
